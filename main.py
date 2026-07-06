@@ -1,42 +1,22 @@
-import logging
-from telegram.ext import ApplicationBuilder, MessageHandler, filters
+import os
+from pyrogram import Client, filters
 
-# 1. إعداد سجلات احترافية لمراقبة الأداء
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+# بيانات الحساب (استخدمها كما هي)
+api_id = 37664645
+api_hash = "f103f3863b43959a18fe5b21b191f43f"
 
-TOKEN = "8674719543:AAG-9SeZarQsWiRWGn2u8Gg2ZQCg01UpZ-U"
-MY_CHANNEL = "@Giftsao" 
+# قراءة الجلسة من المتغيرات التي أضفتها في Railway
+session_string = os.environ.get("SESSION_STRING")
 
-# 2. وظيفة صيد الهدايا الذكية
-async def hunt_gifts(update, context):
-    if update.channel_post:
-        msg = update.channel_post
-        text = (msg.text or msg.caption or "").lower()
-        
-        # فلتر متقدم: لا يكتفي برابط، بل يبحث عن كلمات محفزة للسرعة
-        keywords = ["price", "stars", "⭐️", "gift", "هدي", "سعر"]
-        
-        if "t.me/" in text and any(k in text for k in keywords):
-            try:
-                # إعادة توجيه الهدية فوراً
-                await msg.forward(chat_id=MY_CHANNEL)
-                # إضافة رسالة تأكيد في السجلات
-                logging.info(f"تم صيد هدية بنجاح من: {msg.chat.title}")
-            except Exception as e:
-                logging.error(f"فشل في صيد الهدية: {e}")
+# تشغيل البوت باستخدام الجلسة المحفوظة
+app = Client("my_hunter_bot", api_id=api_id, api_hash=api_hash, session_string=session_string)
 
-if __name__ == '__main__':
-    # 3. بناء البوت مع تحسينات الأداء (Concurrency)
-    # نستخدم build() لضمان استقرار المهام
-    app = ApplicationBuilder().token(TOKEN).concurrent_updates(True).build()
-    
-    # 4. معالج مخصص للقنوات فقط لتقليل الضغط على البوت
-    app.add_handler(MessageHandler(filters.ChatType.CHANNEL, hunt_gifts))
-    
-    print("--- [ النظام يعمل بكفاءة عالية ] ---")
-    print("--- [ الصياد يراقب القنوات الآن 24/7 ] ---")
-    app.run_polling()
-                
+@app.on_message(filters.all)
+async def hunter(client, message):
+    text = message.text or message.caption or ""
+    # فلتر صيد الهدايا
+    if "t.me/" in text and any(k in text for k in ["Stars", "⭐️", "Price", "Gift"]):
+        await message.forward("@Giftsao")
+        print("تم صيد هدية!")
+
+app.run()
